@@ -1,4 +1,4 @@
-(defproject clojure-json-schema "0.0.1-SNAPSHOT"
+(defproject com.intelie/closchema "0.0.1-SNAPSHOT"
   :description "Implements the JSON Schema specification."
   :dependencies [[org.clojure/clojure "1.2.0-master-SNAPSHOT"]
                  [org.clojure/clojure-contrib "1.2.0-SNAPSHOT"]

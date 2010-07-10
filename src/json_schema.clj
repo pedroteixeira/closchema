@@ -1,4 +1,4 @@
-(ns json-schema
+(ns closchema
   "This is JSON Schema in Clojure. See http://tools.ietf.org/html/draft-zyp-json-schema-02
  Main purposed is to allow object validation, but schema metadata can be used for exposing contracts as well."
   (:use clojure.walk
@@ -9,31 +9,35 @@
 
 
 
-(def *schema-context* nil)
-(def *parent* nil)
+(def ^{:doc "Allow validation errors to be captured."}
+     *validation-context* nil)
+
+(def ^{:doc "When walking an object, we keep a binding to current parent."}
+     *parent* nil)
 
 
 (defn process-errors
-  "Default processing is just output boolean return."
+  "Default processing just outputs a boolean return."
   [errors]  
   (= (count errors) 0))
 
 (defmacro with-validation-context  
-  "Defines a binding to allow access to the root object and to enable invalidations to be captured. This strategy removes the need of raising exceptions at every single invalid point, and allows context information to be used when reporting about errors."
+  "Defines a binding to allow access to the root object and to enable invalidations to be captured. This strategy removes the need of raising exceptions at every single invalid point, and allows context information to be used when reporting about errors. Nested contexts are just ignored."
   [& body]  
   `(let [body# #(do ~@body
-                    (process-errors @(:errors *schema-context*)))]
-     (if-not *schema-context*  
-       (binding [*schema-context* {:errors (ref '())
+                    (process-errors @(:errors *validation-context*)))]
+     (if-not *validation-context*  
+       (binding [*validation-context* {:errors (ref '())
                                    :path (ref [])}]                  
          (body#))
        (body#))))
 
 
 (defmacro walk-in
+  "Step inside a relative path, from a previous object. This information is useful for reporting."
   [parent rel-path & body]
   `(binding [*parent* ~parent]
-     (if-let [{path# :path} *schema-context*]
+     (if-let [{path# :path} *validation-context*]
        (do 
          (dosync alter path# conj ~rel-path)
          ~@body
@@ -42,20 +46,20 @@
 
 
 (defmacro invalid
-  ""
+  "Register an invalid piece of data according to schema."
   [& args]
   (let [[path args] (if (keyword? (first args)) [nil args] [(first args) (rest args)])
         key (first args)
         data (second args)] 
     `(let [error# {:ref ~path :key ~key :data ~data}]
-       (if-let [{errors# :errors path# :path} *schema-context*]
+       (if-let [{errors# :errors path# :path} *validation-context*]
          (dosync (alter errors# conj
                         (merge {:path (conj @path# ~path)} error#))))
        (process-errors (list error#)))))
 
 
 (defmacro report
-  "Returns all errors."
+  "Returns all errors, instead of simple boolean."
   [& args]
   `(binding [process-errors (fn [errors#] errors#)]
      (with-validation-context    
@@ -106,8 +110,9 @@
 (defn common-validate [schema instance]
   (check-basic-type schema instance)
 
-;enum
-;default  
+  (comment TODO
+           disallow
+           extends)
   )
 
 
@@ -163,10 +168,11 @@
   #_ "specific array validation"
   (let [total (count instance)]
     (do-template
-     [key op]
+     [key op]     
      (if-let [expected (key schema)]
        (when (and (op total expected))
          (invalid key {:expected expected :actual total}))
+       
        :minItems <
        :maxItems >)))
 
@@ -197,3 +203,19 @@
 ;maxLength
 ;pattern  
   )
+
+
+(defmethod validate* "number"
+  [schema instance]
+  (common-validate schema instance)
+  (comment
+    minimum
+    maximum
+    miniumCanEqual
+    maximumCanEqual
+    divisibleBy
+    )
+  )
+
+
+

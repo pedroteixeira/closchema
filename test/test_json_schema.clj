@@ -1,5 +1,5 @@
-(ns test-json-schema
-  (:use json-schema
+(ns closchema
+  (:use closchema
 	lazytest.describe))  
 
 
@@ -18,12 +18,13 @@
                   (let [actual# (select-keys (meta e#) (keys ~condition))]
                     (= actual# ~condition)))))))
 
-
+ 
 
 (def base-schema {:type "object"
-                         :properties {:id    {:type "number"}
-                                      :name  {:type "string"}
-                                      :description {:optional true :type "string"}}})
+                  :properties {:id    {:type "number"}
+                               :name  {:type "string"}
+                               :description {:optional true :type "string"}}})
+
  
 (describe validate "object"
     
@@ -59,7 +60,7 @@
          (validate s {:id 1 :name "wine" :age "13 years" :country "france"})
          (not (validate s {:id 1 :name "wine" :age 13})))))))
 
-
+ 
 
 (describe validate "items"
 
@@ -73,7 +74,7 @@
                                          s2 (ctx {:type "array" :items {:type "object" :properties {:name {:type "string"}}}})]     
     (it "should accept empty array"
       (validate s1 []))
-    
+     
     (it "should accept homogenous array"
       (and  
        (validate s1 ["a" "b" "c"])
@@ -84,9 +85,9 @@
 
     (it "should not accept if inner item does not follow item schema" 
       (not (validate s2 [{:name "quake"} {:id 1}]))))
-  
- 
-  
+
+
+    
   (describe validate "with array of schemas"      
       
     (describe "with single object definitions"
@@ -123,5 +124,5 @@
       (it "should be strict about tuple typing"
         (validate s [1])) 
 
-      (it "should be strict about tuple typing" 
+      (it "should be strict about tuple typing"  
         (not (validate s [1 "a"]))))))
